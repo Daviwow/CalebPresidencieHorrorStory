@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zoom sulla TV e Avvio del Video</title>
+    <style>
+        @font-face {
+            font-family: 'CustomFont';
+            src: url('font.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'CustomFontBold';
+            src: url('fontbold.ttf') format('truetype'); /* Caricato il font bold */
+        }
+        body {
+            background-color: black;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 120vh;
+            overflow: hidden;
+            color: white;
+            font-family: Arial, sans-serif;
+            position: relative; /* Aggiunto position relative per body */
+        }
+        .container {
+            position: relative;
+            width: 200px; /* Dimensione della TV */
+            height: auto;
+            transition: transform 2.5s ease-in-out, opacity 1s ease-in-out;
+            transform-origin: center;
+            z-index: 2; /* Assicura che la TV sia sopra lo spotlight */
+        }
+        .tv, .button {
+            display: block;
+            width: 100%;
+            height: auto;
+            transition: opacity 1s ease-in-out;
+        }
+        .button {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px; /* Dimensioni del pulsante */
+            height: auto;
+            cursor: pointer;
+            z-index: 1; /* Assicura che il pulsante sia sopra lo spotlight */
+        }
+        .spotlight {
+            position: absolute;
+            top: -455%; /* Posizione verticale dello spotlight */
+            left: 50%; /* Posizione orizzontale dello spotlight */
+            transform: translateX(-50%);
+            width: 1200px; /* Dimensione dello spotlight */
+            height: auto;
+            z-index: 0; /* Assicura che lo spotlight sia dietro la TV e il pulsante */
+            animation: flicker 12s infinite, rotate 12s infinite ease-in-out; /* Animazione del flicker e della rotazione */
+        }
+        .video-container {
+            position: absolute;
+            top: -8%;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+        video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            pointer-events: none; /* Disabilita l'interazione con il video */
+        }
+        .text-below-tv, .second-text {
+            opacity: 1;
+            transition: opacity 1s ease-in-out;
+        }
+        .text-below-tv.hide, .second-text.hide {
+            opacity: 0;
+        }
+        .text-below-tv {
+            margin-top: 130px; /* Sposta il testo più in basso */
+            text-align: center;
+            font-size: 30px; /* Dimensione del primo testo ingrandita */
+            font-family: 'CustomFont', Arial, sans-serif;
+            color: rgb(134, 134, 139); /* Colore grigio */
+        }
+        .second-text {
+            margin-top: 1px; /* Spazio tra il primo e il secondo testo */
+            text-align: center;
+            font-size: 60px; /* Dimensione del secondo testo ingrandita */
+            font-family: 'CustomFontBold', Arial, sans-serif; /* Cambiato il font a CustomFontBold */
+            color: rgb(150, 150, 150); /* Colore grigio */
+        }
+        .dust {
+            position: absolute;
+            top: 20%;
+            left: 40%;
+            width: 20%;
+            height: 20%;
+            background-image: url('dust.gif');
+            background-size: cover;
+            opacity: 0.2; /* Opacità al 50% */
+            pointer-events: none; /* Non interferisce con gli eventi del mouse */
+            z-index: -1; /* Metti dietro tutti gli altri contenuti */
+        }
+        .extra-image {
+            position: fixed;
+            bottom: 0;
+            right: 0;
+            width: 150px; /* Dimensione dell'immagine extra */
+            height: auto;
+            opacity: 0; /* Inizialmente invisibile */
+            transition: opacity 1s ease-in-out;
+            pointer-events: none; /* Non interferisce con gli eventi del mouse */
+            animation: fade-in-out 12s infinite; /* Animazione dell'opacità */
+            z-index: 999; /* Assicura che sia sopra tutti gli altri elementi */
+        }
+        .extra-image.hide {
+            opacity: 0;
+        }
+
+        @keyframes fade-in-out {
+            0% {
+                opacity: 0;
+            }
+            45% {
+                opacity: 0;
+            }
+            50% {
+                opacity: 1;
+            }
+            55% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0;
+            }
+        }
+        @keyframes flicker {
+            0%, 56% {
+                opacity: 1;
+            }
+            57% {
+                opacity: 0;
+            }
+            58% {
+                opacity: 1;
+            }
+            59% {
+                opacity: 0;
+            }
+            63% {
+                opacity: 1;
+            }
+        }
+        @keyframes rotate {
+            0% {
+                transform: translateX(-50%) rotate(-4deg);
+            }
+            10% {
+                transform: translateX(-50%) rotate(4deg);
+            }
+            20% {
+                transform: translateX(-50%) rotate(-4deg);
+            }
+            30% {
+                transform: translateX(-50%) rotate(4deg);
+            }
+            40% {
+                transform: translateX(-50%) rotate(-4deg);
+            }
+            50% {
+                transform: translateX(-50%) rotate(4deg);
+            }
+            60% {
+                transform: translateX(-50%) rotate(-4deg);
+            }
+            70% {
+                transform: translateX(-50%) rotate(4deg);
+            }
+            80% {
+                transform: translateX(-50%) rotate(-4deg);
+            }
+            90% {
+                transform: translateX(-50%) rotate(4deg);
+            }
+            100% {
+                transform: translateX(-50%) rotate(-4deg);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dust"></div> <!-- Immagine di dust -->
+    <div class="container" id="tv-container">
+        <img src="tv.png" alt="TV" class="tv">
+        <img src="button.png" alt="Pulsante" class="button" id="button">
+        <img src="spotlight.png" alt="Spotlight" class="spotlight">
+    </div>
+    <div class="text-below-tv">
+        For the best experience, use this website in
+    </div>
+    <div class="second-text">
+        Full Screen
+    </div>
+    <div class="video-container" id="video-container">
+        <video id="video">
+            <source src="video.mp4" type="video/mp4">
+            Il tuo browser non supporta il tag video.
+        </video>
+    </div>
+    <img src="homo1.png" alt="Extra Image" class="extra-image" id="extra-image">
+
+    <!-- Audio di sottofondo -->
+    <audio id="background-audio" src="burningmemory.mp3" loop autoplay></audio>
+
+    <script>
+        document.getElementById('button').addEventListener('click', function() {
+            const container = document.getElementById('tv-container');
+            container.style.transform = 'scale(10)';
+
+            // Nascondi i testi gradualmente
+            document.querySelector('.text-below-tv').classList.add('hide');
+            document.querySelector('.second-text').classList.add('hide');
+
+            // Nascondi l'immagine extra
+            document.getElementById('extra-image').classList.add('hide');
+
+            // Fade out dell'audio di sottofondo
+            const audio = document.getElementById('background-audio');
+            const fadeOutDuration = 1500; // Durata del fade out in millisecondi
+            const fadeOutInterval = 50; // Intervallo in millisecondi per il fade out
+            const fadeOutStep = audio.volume / (fadeOutDuration / fadeOutInterval); // Quantità di volume da diminuire ad ogni passo
+            let fadeOut = setInterval(function() {
+                if (audio.volume > fadeOutStep) {
+                    audio.volume -= fadeOutStep;
+                } else {
+                    audio.volume = 0;
+                    clearInterval(fadeOut);
+                }
+            }, fadeOutInterval);
+
+            setTimeout(function() {
+                container.style.opacity = '0';
+            }, 1500);
+
+            setTimeout(function() {
+                const button = document.getElementById('button');
+                button.style.opacity = '0';
+            }, 2000);
+
+            setTimeout(function() {
+                container.style.transform = 'scale(1)';
+                container.style.opacity = '0';
+                const button = document.getElementById('button');
+                button.style.opacity = '0';
+                const videoContainer = document.getElementById('video-container');
+                videoContainer.style.display = 'flex';
+                const video = document.getElementById('video');
+                video.play();
+            }, 3500);
+        });
+
+        function getRandomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const spotlight = document.querySelector('.spotlight');
+            const animationDuration = getRandomInt(6000, 12000);
+            spotlight.style.animationDuration = animationDuration + 'ms';
+
+            // Imposta il volume iniziale dell'audio di sottofondo
+            const audio = document.getElementById('background-audio');
+            audio.volume = 0.1; // Volume iniziale basso
+        });
+    </script>
+</body>
+</html>
