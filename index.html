@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Godlewskie</title>
+    <style>
+        @font-face {
+            font-family: 'CustomFont';
+            src: url('font.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'CustomFontBold';
+            src: url('fontbold.ttf') format('truetype');
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --crt-green: #33ff00;
+            --crt-amber: #ffb000;
+            --crt-white: #e0e0e0;
+            --dark: #0a0a0a;
+            --darker: #050505;
+        }
+
+        body {
+            background: var(--darker);
+            color: var(--crt-white);
+            font-family: 'CustomFont', 'Courier New', monospace;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            cursor: none;
+        }
+
+        /* Custom cursor replacement */
+        .cursor-follower {
+            position: fixed;
+            width: 8px;
+            height: 8px;
+            background: var(--crt-green);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9999;
+            mix-blend-mode: difference;
+            transition: transform 0.1s ease;
+        }
+
+        .cursor-follower.trail {
+            width: 4px;
+            height: 4px;
+            opacity: 0.3;
+        }
+
+        /* CRT overlay effects */
+        .crt-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 9000;
+        }
+
+        .scanlines {
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.15),
+                rgba(0, 0, 0, 0.15) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+        }
+
+        .vignette {
+            background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.6) 100%);
+        }
+
+        .noise {
+            opacity: 0.03;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        /* Screen states */
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 2s ease;
+        }
+
+        .screen.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        /* === SCREEN 1: BOOT SEQUENCE === */
+        #boot-screen {
+            background: var(--darker);
+            font-family: 'Courier New', monospace;
+        }
+
+        .boot-text {
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--crt-green);
+            max-width: 600px;
+            padding: 20px;
+            text-shadow: 0 0 10px rgba(51, 255, 0, 0.3);
+        }
+
+        .boot-line {
+            opacity: 0;
+            transform: translateY(2px);
+        }
+
+        .boot-cursor {
+            display: inline-block;
+            width: 10px;
+            height: 18px;
+            background: var(--crt-green);
+            animation: blink 1s step-end infinite;
+            vertical-align: text-bottom;
+            margin-left: 2px;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        .glitch-text {
+            position: relative;
+        }
+
+        .glitch-text::before,
+        .glitch-text::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .glitch-text::before {
+            color: #ff0000;
+            clip-path: polygon(0 0, 100% 0, 100% 45%, 0 45%);
+            transform: translateX(-2px);
+            opacity: 0;
+        }
+
+        .glitch-text::after {
+            color: #00ffff;
+            clip-path: polygon(0 55%, 100% 55%, 100% 100%, 0 100%);
+            transform: translateX(2px);
+            opacity: 0;
+        }
+
+        .glitch-text.glitching::before,
+        .glitch-text.glitching::after {
+            opacity: 0.7;
+            animation: glitch-shift 0.3s infinite;
+        }
+
+        @keyframes glitch-shift {
+            0% { transform: translateX(-2px); }
+            25% { transform: translateX(3px); }
+            50% { transform: translateX(-1px); }
+            75% { transform: translateX(2px); }
+            100% { transform: translateX(-2px); }
+        }
+
+        /* === SCREEN 2: STATIC / CHANNEL SEARCH === */
+        #static-screen {
+            background: #1a1a1a;
+        }
+
+        .static-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.4;
+        }
+
+        .channel-indicator {
+            position: absolute;
+            top: 30px;
+            right: 40px;
+            font-family: 'Courier New', monospace;
+            font-size: 18px;
+            color: var(--crt-amber);
+            text-shadow: 0 0 5px rgba(255, 176, 0, 0.5);
+        }
+
+        .channel-number {
+            font-size: 36px;
+            font-weight: bold;
+        }
+
+        .signal-bar {
+            position: absolute;
+            top: 30px;
+            right: 120px;
+            display: flex;
+            gap: 4px;
+            align-items: flex-end;
+            height: 30px;
+        }
+
+        .signal-segment {
+            width: 6px;
+            background: var(--crt-amber);
+            opacity: 0.3;
+            transition: opacity 0.2s;
+        }
+
+        .signal-segment.active {
+            opacity: 1;
+        }
+
+        .channel-label {
+            position: absolute;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'CustomFont', monospace;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.4);
+            letter-spacing: 4px;
+            text-transform: uppercase;
+        }
+
+        .tune-hint {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.2);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.2; }
+            50% { opacity: 0.6; }
+        }
+
+        /* === SCREEN 3: THE BROADCAST / VIDEO === */
+        #broadcast-screen {
+            background: #000;
+        }
+
+        .video-wrapper {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #main-video {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .broadcast-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .broadcast-header {
+            position: absolute;
+            top: 20px;
+            left: 40px;
+            font-family: 'CustomFont', monospace;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.5);
+            letter-spacing: 2px;
+        }
+
+        .broadcast-timer {
+            position: absolute;
+            top: 20px;
+            right: 40px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            color: var(--crt-green);
+        }
+
+        .broadcast-footer {
+            position: absolute;
+            bottom: 20px;
+            left: 40px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        .rec-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #ff3333;
+            border-radius: 50%;
+            margin-right: 6px;
+            animation: rec-blink 1s step-end infinite;
+        }
+
+        @keyframes rec-blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        /* Horizontal hold glitch effect */
+        .horizontal-hold {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.02);
+            transform: translateX(0);
+            pointer-events: none;
+            opacity: 0;
+        }
+
+        .horizontal-hold.glitching {
+            animation: horizontal-shift 0.1s ease-out;
+        }
+
+        @keyframes horizontal-shift {
+            0% { transform: translateX(0); opacity: 0.5; }
+            25% { transform: translateX(20px); }
+            50% { transform: translateX(-15px); }
+            75% { transform: translateX(10px); }
+            100% { transform: translateX(0); opacity: 0; }
+        }
+
+        /* === UTILITY CLASSES === */
+        .hidden {
+            display: none !important;
+        }
+
+        .fade-in {
+            animation: fadeIn 1s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Subtle flicker for the whole screen */
+        .screen-flicker {
+            animation: screen-flicker 0.15s infinite;
+            animation-play-state: paused;
+        }
+
+        @keyframes screen-flicker {
+            0% { opacity: 1; }
+            50% { opacity: 0.98; }
+            100% { opacity: 1; }
+        }
+
+        /* Audio visualizer bars for static screen */
+        .audio-viz {
+            position: absolute;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 3px;
+            align-items: flex-end;
+            height: 40px;
+            opacity: 0;
+            transition: opacity 1s;
+        }
+
+        .audio-viz.active {
+            opacity: 0.3;
+        }
+
+        .viz-bar {
+            width: 4px;
+            background: var(--crt-green);
+            transition: height 0.05s ease;
+        }
+
+        /* Emergency broadcast style text */
+        .emergency-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'CustomFontBold', Arial, sans-serif;
+            font-size: 24px;
+            color: #ff3333;
+            text-align: center;
+            letter-spacing: 3px;
+            opacity: 0;
+            text-shadow: 0 0 20px rgba(255, 51, 51, 0.5);
+        }
+
+        .emergency-text.show {
+            animation: emergency-flash 0.5s ease forwards;
+        }
+
+        @keyframes emergency-flash {
+            0% { opacity: 0; }
+            10% { opacity: 1; }
+            20% { opacity: 0; }
+            30% { opacity: 1; }
+            100% { opacity: 0.8; }
+        }
+
+        /* Subtle date stamp */
+        .date-stamp {
+            position: absolute;
+            bottom: 20px;
+            right: 40px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.25);
+        }
+
+        /* Loading bar for boot sequence */
+        .boot-progress {
+            width: 300px;
+            height: 2px;
+            background: rgba(51, 255, 0, 0.2);
+            margin-top: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .boot-progress-bar {
+            height: 100%;
+            background: var(--crt-green);
+            width: 0%;
+            transition: width 0.1s linear;
+            box-shadow: 0 0 10px rgba(51, 255, 0, 0.5);
+        }
+
+        /* Subtle grain texture */
+        .grain {
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+            opacity: 0.04;
+            pointer-events: none;
+            z-index: 8999;
+            animation: grain-shift 0.5s steps(10) infinite;
+        }
+
+        @keyframes grain-shift {
+            0%, 100% { transform: translate(0, 0); }
+            10% { transform: translate(-5%, -10%); }
+            20% { transform: translate(-15%, 5%); }
+            30% { transform: translate(7%, -25%); }
+            40% { transform: translate(-5%, 25%); }
+            50% { transform: translate(-15%, 10%); }
+            60% { transform: translate(15%, 0%); }
+            70% { transform: translate(0%, 15%); }
+            80% { transform: translate(3%, 35%); }
+            90% { transform: translate(-10%, 10%); }
+        }
+
+        /* Click to continue subtle prompt */
+        .continue-prompt {
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.15);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            opacity: 0;
+            transition: opacity 2s ease;
+        }
+
+        .continue-prompt.visible {
+            opacity: 1;
+        }
+
+        /* Channel up/down buttons (invisible, click zones) */
+        .tune-zone {
+            position: absolute;
+            top: 0;
+            height: 100%;
+            width: 30%;
+            cursor: none;
+            z-index: 10;
+        }
+
+        .tune-zone.left {
+            left: 0;
+        }
+
+        .tune-zone.right {
+            right: 0;
+        }
+
+        .tune-zone:hover::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 40px;
+            height: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+        }
+
+        .tune-zone.left:hover::after {
+            left: 30px;
+        }
+
+        .tune-zone.right:hover::after {
+            right: 30px;
+        }
+
+        /* Final screen: black after video */
+        #end-screen {
+            background: #000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .end-message {
+            font-family: 'CustomFont', monospace;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.3);
+            text-align: center;
+            line-height: 2;
+            letter-spacing: 1px;
+        }
+
+        .end-message .line {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        /* Subtle breathing animation for the whole page */
+        .breathing {
+            animation: breathe 8s ease-in-out infinite;
+        }
+
+        @keyframes breathe {
+            0%, 100% { filter: brightness(1); }
+            50% { filter: brightness(0.97); }
+        }
+    </style>
+</head>
+<body class="breathing">
+
+    <!-- Custom cursor -->
+    <div class="cursor-follower" id="cursor"></div>
+
+    <!-- CRT overlays -->
+    <div class="crt-overlay scanlines"></div>
+    <div class="crt-overlay vignette"></div>
+    <div class="crt-overlay noise"></div>
+    <div class="grain"></div>
+
+    <!-- === SCREEN 1: BOOT SEQUENCE === -->
+    <div class="screen active" id="boot-screen">
+        <div class="boot-text" id="boot-text">
+            <!-- Boot lines injected by JS -->
+        </div>
+        <div class="boot-progress" id="boot-progress">
+            <div class="boot-progress-bar" id="boot-progress-bar"></div>
+        </div>
+        <div class="continue-prompt" id="continue-prompt">Click anywhere to continue</div>
+    </div>
+
+    <!-- === SCREEN 2: STATIC / CHANNEL SEARCH === -->
+    <div class="screen" id="static-screen">
+        <canvas class="static-canvas" id="static-canvas"></canvas>
+        
+        <div class="channel-indicator">
+            <div class="channel-number" id="channel-num">00</div>
+            <div style="font-size: 10px; opacity: 0.6;">CH</div>
+        </div>
+        
+        <div class="signal-bar" id="signal-bar">
+            <div class="signal-segment" style="height: 8px;"></div>
+            <div class="signal-segment" style="height: 12px;"></div>
+            <div class="signal-segment" style="height: 16px;"></div>
+            <div class="signal-segment" style="height: 20px;"></div>
+            <div class="signal-segment" style="height: 24px;"></div>
+        </div>
+        
+        <div class="audio-viz" id="audio-viz">
+            <!-- Bars injected by JS -->
+        </div>
+        
+        <div class="channel-label" id="channel-label">No Signal</div>
+        
+        <div class="emergency-text" id="emergency-text">
+            DO NOT ADJUST<br>YOUR SET
+        </div>
+        
+        <div class="tune-hint">use left / right side to tune</div>
+        
+        <div class="tune-zone left" id="tune-left"></div>
+        <div class="tune-zone right" id="tune-right"></div>
+        
+        <div class="date-stamp" id="date-stamp">--/--/---- --:--:--</div>
+    </div>
+
+    <!-- === SCREEN 3: THE BROADCAST === -->
+    <div class="screen" id="broadcast-screen">
+        <div class="video-wrapper">
+            <video id="main-video" preload="auto">
+                <source src="video.mp4" type="video/mp4">
+            </video>
+            <div class="broadcast-overlay">
+                <div class="broadcast-header">
+                    <span class="rec-dot"></span>REC
+                </div>
+                <div class="broadcast-timer" id="broadcast-timer">00:00:00</div>
+                <div class="broadcast-footer">PROJECT GODLEWSKIE // ARCHIVE FOOTAGE</div>
+                <div class="horizontal-hold" id="horizontal-hold"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- === SCREEN 4: END === -->
+    <div class="screen" id="end-screen">
+        <div class="end-message" id="end-message">
+            <div class="line">Signal lost.</div>
+            <div class="line">Connection terminated.</div>
+            <div class="line"> </div>
+            <div class="line">The archive remains.</div>
+        </div>
+    </div>
+
+    <!-- Audio -->
+    <audio id="ambient-audio" src="burningmemory.mp3" loop preload="auto"></audio>
+    <audio id="static-audio" loop preload="auto"></audio>
+    <audio id="tune-audio" preload="auto"></audio>
+
+    <script>
+        // ===== STATE =====
+        const state = {
+            screen: 'boot',
+            channel: 0,
+            targetChannel: 7, // The "correct" channel where the video is
+            tuning: false,
+            audioContext: null,
+            staticOscillators: [],
+            bootComplete: false,
+            videoStarted: false
+        };
+
+        // ===== DOM refs =====
+        const cursor = document.getElementById('cursor');
+        const bootScreen = document.getElementById('boot-screen');
+        const staticScreen = document.getElementById('static-screen');
+        const broadcastScreen = document.getElementById('broadcast-screen');
+        const endScreen = document.getElementById('end-screen');
+        const bootText = document.getElementById('boot-text');
+        const bootProgressBar = document.getElementById('boot-progress-bar');
+        const continuePrompt = document.getElementById('continue-prompt');
+        const staticCanvas = document.getElementById('static-canvas');
+        const channelNum = document.getElementById('channel-num');
+        const channelLabel = document.getElementById('channel-label');
+        const signalSegments = document.querySelectorAll('.signal-segment');
+        const emergencyText = document.getElementById('emergency-text');
+        const tuneLeft = document.getElementById('tune-left');
+        const tuneRight = document.getElementById('tune-right');
+        const mainVideo = document.getElementById('main-video');
+        const broadcastTimer = document.getElementById('broadcast-timer');
+        const horizontalHold = document.getElementById('horizontal-hold');
+        const ambientAudio = document.getElementById('ambient-audio');
+        const dateStamp = document.getElementById('date-stamp');
+        const audioViz = document.getElementById('audio-viz');
+
+        // ===== CURSOR =====
+        let mouseX = window.innerWidth / 2, mouseY = window.innerHeight / 2;
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            cursor.style.left = mouseX - 4 + 'px';
+            cursor.style.top = mouseY - 4 + 'px';
+        });
+
+        // ===== BOOT SEQUENCE =====
+        const bootLines = [
+            { text: 'BIOS DATE 01/15/93 14:22:51 VER 1.02', delay: 100 },
+            { text: 'CPU: i386-SX, Speed: 33MHz', delay: 200 },
+            { text: '640K RAM SYSTEM... OK', delay: 400 },
+            { text: 'VIDEO ADAPTER... DETECTED', delay: 300 },
+            { text: 'INITIALIZING VIDEO SUBSYSTEM...', delay: 500 },
+            { text: '................................ OK', delay: 600 },
+            { text: 'LOADING DRIVERS:', delay: 200 },
+            { text: '  [HIMEM.SYS] ................ OK', delay: 300 },
+            { text: '  [EMM386.EXE] ............... OK', delay: 300 },
+            { text: '  [ANSI.SYS] ................. OK', delay: 200 },
+            { text: '  [MOUSE.COM] ................ OK', delay: 200 },
+            { text: '', delay: 100 },
+            { text: 'MOUNTING VOLUMES:', delay: 200 },
+            { text: '  C: [LOCAL] ................. 234MB', delay: 300 },
+            { text: '  D: [NETWORK] ............... TIMEOUT', delay: 400, glitch: true },
+            { text: '  E: [REMOVABLE] ............. 0KB ???', delay: 500, glitch: true },
+            { text: '', delay: 100 },
+            { text: 'SEARCHING FOR BOOT MEDIA...', delay: 400 },
+            { text: 'FOUND: E:\\ARCHIVE\\FOOTAGE\\', delay: 600 },
+            { text: 'FILE: VIDEO.MP4', delay: 200 },
+            { text: 'SIZE: 64,204,800 BYTES', delay: 200 },
+            { text: 'DATE: 1993-08-17 03:47:12', delay: 300, glitch: true },
+            { text: '', delay: 100 },
+            { text: 'WARNING: FILE SIGNATURE MISMATCH', delay: 300, glitch: true },
+            { text: 'WARNING: CHECKSUM VERIFICATION FAILED', delay: 200, glitch: true },
+            { text: '', delay: 100 },
+            { text: 'ATTEMPTING RECOVERY...', delay: 500 },
+            { text: '................................', delay: 800 },
+            { text: 'FRAGMENTS RECOVERED: 87%', delay: 300 },
+            { text: '', delay: 100 },
+            { text: 'INITIALIZING ANALOG INTERFACE...', delay: 400 },
+            { text: 'TUNING RECEIVER...', delay: 500 },
+            { text: '', delay: 200 },
+            { text: '> ', delay: 0 },
+        ];
+
+        async function runBootSequence() {
+            let totalDelay = 0;
+            const totalLines = bootLines.length;
+            
+            for (let i = 0; i < totalLines; i++) {
+                const line = bootLines[i];
+                totalDelay += line.delay;
+                
+                setTimeout(() => {
+                    const div = document.createElement('div');
+                    div.className = 'boot-line';
+                    div.style.opacity = '0';
+                    
+                    if (line.glitch) {
+                        div.className += ' glitch-text';
+                        div.setAttribute('data-text', line.text);
+                    }
+                    
+                    div.textContent = line.text;
+                    bootText.appendChild(div);
+                    
+                    // Fade in
+                    requestAnimationFrame(() => {
+                        div.style.transition = 'opacity 0.1s';
+                        div.style.opacity = '1';
+                    });
+                    
+                    // Random glitch on glitch lines
+                    if (line.glitch && Math.random() > 0.5) {
+                        setTimeout(() => div.classList.add('glitching'), 50);
+                        setTimeout(() => div.classList.remove('glitching'), 350);
+                    }
+                    
+                    // Scroll to bottom
+                    bootText.scrollTop = bootText.scrollHeight;
+                    
+                    // Progress bar
+                    const progress = ((i + 1) / totalLines) * 100;
+                    bootProgressBar.style.width = progress + '%';
+                    
+                    // Add cursor on last line
+                    if (i === totalLines - 1) {
+                        const cursorSpan = document.createElement('span');
+                        cursorSpan.className = 'boot-cursor';
+                        div.appendChild(cursorSpan);
+                        
+                        setTimeout(() => {
+                            state.bootComplete = true;
+                            continuePrompt.classList.add('visible');
+                        }, 500);
+                    }
+                }, totalDelay);
+            }
+        }
+
+        // ===== STATIC NOISE CANVAS =====
+        const ctx = staticCanvas.getContext('2d');
+        let staticFrame = 0;
+
+        function resizeCanvas() {
+            staticCanvas.width = window.innerWidth;
+            staticCanvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        function drawStatic() {
+            if (state.screen !== 'static') return;
+            
+            const w = staticCanvas.width;
+            const h = staticCanvas.height;
+            const imageData = ctx.createImageData(w, h);
+            const data = imageData.data;
+            
+            for (let i = 0; i < data.length; i += 4) {
+                const val = Math.random() * 255;
+                data[i] = val;     // R
+                data[i + 1] = val; // G
+                data[i + 2] = val; // B
+                data[i + 3] = 255; // A
+            }
+            
+            ctx.putImageData(imageData, 0, 0);
+            staticFrame++;
+            requestAnimationFrame(drawStatic);
+        }
+
+        // ===== AUDIO SYNTHESIS (for static noise) =====
+        function initAudio() {
+            if (state.audioContext) return;
+            
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            state.audioContext = new AudioContext();
+            
+            // Create static noise using buffer
+            const bufferSize = state.audioContext.sampleRate * 2;
+            const buffer = state.audioContext.createBuffer(1, bufferSize, state.audioContext.sampleRate);
+            const data = buffer.getChannelData(0);
+            
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
+            
+            const noise = state.audioContext.createBufferSource();
+            noise.buffer = buffer;
+            noise.loop = true;
+            
+            const filter = state.audioContext.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.frequency.value = 1000;
+            filter.Q.value = 0.5;
+            
+            const gain = state.audioContext.createGain();
+            gain.gain.value = 0.05;
+            
+            noise.connect(filter);
+            filter.connect(gain);
+            gain.connect(state.audioContext.destination);
+            
+            noise.start();
+            state.staticOscillators.push({ noise, gain, filter });
+            
+            return gain;
+        }
+
+        function setStaticVolume(channel) {
+            const distance = Math.abs(channel - state.targetChannel);
+            const volume = Math.max(0, 0.08 - (distance * 0.025));
+            
+            state.staticOscillators.forEach(osc => {
+                if (osc.gain) {
+                    osc.gain.gain.setTargetAtTime(volume, state.audioContext.currentTime, 0.1);
+                    // Shift filter frequency based on channel "tuning"
+                    const freq = 500 + (Math.random() * 2000);
+                    osc.filter.frequency.setTargetAtTime(freq, state.audioContext.currentTime, 0.05);
+                }
+            });
+        }
+
+        // ===== CHANNEL SYSTEM =====
+        const channels = {
+            0: { label: 'No Signal', signal: 0 },
+            1: { label: 'STATIC', signal: 1 },
+            2: { label: 'TEST PATTERN', signal: 2 },
+            3: { label: 'COLOR BARS', signal: 2 },
+            4: { label: 'EMERGENCY BROADCAST', signal: 3, special: 'emergency' },
+            5: { label: 'PLEASE STAND BY', signal: 2 },
+            6: { label: 'APERTURE SCIENCE', signal: 3, special: 'glitch' },
+            7: { label: '???', signal: 5, special: 'broadcast' },
+            8: { label: 'STATIC', signal: 1 },
+            9: { label: 'No Signal', signal: 0 }
+        };
+
+        function updateChannelDisplay() {
+            const ch = channels[state.channel] || channels[0];
+            channelNum.textContent = state.channel.toString().padStart(2, '0');
+            channelLabel.textContent = ch.label;
+            
+            // Signal bars
+            signalSegments.forEach((seg, i) => {
+                seg.classList.toggle('active', i < ch.signal);
+            });
+            
+            // Volume based on proximity to target
+            if (state.audioContext) {
+                setStaticVolume(state.channel);
+            }
+            
+            // Special effects
+            if (ch.special === 'emergency') {
+                emergencyText.classList.add('show');
+                setTimeout(() => emergencyText.classList.remove('show'), 2000);
+            }
+            
+            // If we hit the target channel
+            if (state.channel === state.targetChannel && !state.videoStarted) {
+                setTimeout(() => transitionToBroadcast(), 1500);
+            }
+        }
+
+        function changeChannel(direction) {
+            if (state.tuning) return;
+            state.tuning = true;
+            
+            // Play click sound
+            playClickSound();
+            
+            // Visual feedback
+            staticCanvas.style.transform = `skewX(${direction * -5}deg)`;
+            setTimeout(() => {
+                staticCanvas.style.transform = 'skewX(0deg)';
+            }, 200);
+            
+            state.channel += direction;
+            if (state.channel < 0) state.channel = 9;
+            if (state.channel > 9) state.channel = 0;
+            
+            updateChannelDisplay();
+            
+            setTimeout(() => {
+                state.tuning = false;
+            }, 300);
+        }
+
+        function playClickSound() {
+            if (!state.audioContext) return;
+            const osc = state.audioContext.createOscillator();
+            const gain = state.audioContext.createGain();
+            osc.type = 'square';
+            osc.frequency.value = 200 + Math.random() * 100;
+            gain.gain.value = 0.03;
+            gain.gain.exponentialRampToValueAtTime(0.001, state.audioContext.currentTime + 0.1);
+            osc.connect(gain);
+            gain.connect(state.audioContext.destination);
+            osc.start();
+            osc.stop(state.audioContext.currentTime + 0.1);
+        }
+
+        // ===== TRANSITIONS =====
+        function transitionToStatic() {
+            state.screen = 'static';
+            bootScreen.classList.remove('active');
+            staticScreen.classList.add('active');
+            
+            // Start ambient audio
+            ambientAudio.volume = 0.03;
+            ambientAudio.play().catch(() => {});
+            
+            // Start static noise
+            initAudio();
+            drawStatic();
+            
+            // Start date stamp
+            startDateStamp();
+            
+            // Create audio viz bars
+            for (let i = 0; i < 20; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'viz-bar';
+                bar.style.height = '4px';
+                audioViz.appendChild(bar);
+            }
+            audioViz.classList.add('active');
+            animateVizBars();
+            
+            updateChannelDisplay();
+        }
+
+        function animateVizBars() {
+            if (state.screen !== 'static') return;
+            const bars = audioViz.querySelectorAll('.viz-bar');
+            bars.forEach(bar => {
+                const h = Math.random() * 36 + 4;
+                bar.style.height = h + 'px';
+            });
+            setTimeout(() => requestAnimationFrame(animateVizBars), 50);
+        }
+
+        function transitionToBroadcast() {
+            state.videoStarted = true;
+            state.screen = 'broadcast';
+            staticScreen.classList.remove('active');
+            broadcastScreen.classList.add('active');
+            
+            // Fade out static audio
+            state.staticOscillators.forEach(osc => {
+                if (osc.gain) {
+                    osc.gain.gain.exponentialRampToValueAtTime(0.001, state.audioContext.currentTime + 2);
+                }
+            });
+            
+            // Fade out ambient
+            const fadeInterval = setInterval(() => {
+                if (ambientAudio.volume > 0.002) {
+                    ambientAudio.volume *= 0.9;
+                } else {
+                    ambientAudio.pause();
+                    clearInterval(fadeInterval);
+                }
+            }, 100);
+            
+            // Start video
+            mainVideo.play().catch(e => console.log('Video play failed:', e));
+            
+            // Start timer
+            startBroadcastTimer();
+            
+            // Random horizontal hold glitches
+            setInterval(() => {
+                if (Math.random() > 0.7) {
+                    horizontalHold.classList.add('glitching');
+                    setTimeout(() => horizontalHold.classList.remove('glitching'), 200);
+                }
+            }, 3000);
+            
+            // End when video finishes
+            mainVideo.addEventListener('ended', transitionToEnd);
+        }
+
+        function startBroadcastTimer() {
+            let seconds = 0;
+            setInterval(() => {
+                seconds++;
+                const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+                const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+                const s = (seconds % 60).toString().padStart(2, '0');
+                broadcastTimer.textContent = `${h}:${m}:${s}`;
+            }, 1000);
+        }
+
+        function transitionToEnd() {
+            state.screen = 'end';
+            broadcastScreen.classList.remove('active');
+            endScreen.classList.add('active');
+            
+            // Fade in end message lines
+            const lines = document.querySelectorAll('.end-message .line');
+            lines.forEach((line, i) => {
+                setTimeout(() => {
+                    line.style.transition = 'all 2s ease';
+                    line.style.opacity = '1';
+                    line.style.transform = 'translateY(0)';
+                }, i * 1500 + 500);
+            });
+        }
+
+        function startDateStamp() {
+            function update() {
+                const now = new Date();
+                // Make it look like 1993
+                const fakeDate = new Date(1993, now.getMonth(), now.getDate(), now.getHours(), now.getMinutes(), now.getSeconds());
+                const str = fakeDate.toLocaleString('en-US', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                });
+                dateStamp.textContent = str;
+            }
+            update();
+            setInterval(update, 1000);
+        }
+
+        // ===== INPUT HANDLING =====
+        document.addEventListener('click', (e) => {
+            // Initialize audio context on first click
+            if (!state.audioContext) {
+                initAudio();
+            }
+            
+            if (state.screen === 'boot' && state.bootComplete) {
+                transitionToStatic();
+            }
+        });
+
+        tuneLeft.addEventListener('click', (e) => {
+            e.stopPropagation();
+            changeChannel(-1);
+        });
+
+        tuneRight.addEventListener('click', (e) => {
+            e.stopPropagation();
+            changeChannel(1);
+        });
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (state.screen === 'static') {
+                if (e.key === 'ArrowLeft') changeChannel(-1);
+                if (e.key === 'ArrowRight') changeChannel(1);
+            }
+        });
+
+        // ===== RANDOM GLITCHES =====
+        setInterval(() => {
+            if (state.screen === 'boot' && Math.random() > 0.95) {
+                document.body.style.filter = `brightness(${0.9 + Math.random() * 0.2})`;
+                setTimeout(() => {
+                    document.body.style.filter = 'brightness(1)';
+                }, 50);
+            }
+        }, 2000);
+
+        // ===== INIT =====
+        runBootSequence();
+
+        // Prevent right click
+        document.addEventListener('contextmenu', e => e.preventDefault());
+    </script>
+</body>
+</html>
